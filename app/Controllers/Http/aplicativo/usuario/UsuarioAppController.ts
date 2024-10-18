@@ -14,6 +14,15 @@ export default class UsuariosController {
     return response.json({ message: 'Deslogado' })
   }
 
+  async resetPrimeiroAcesso({ request }: HttpContextContract) {
+    const { codigo_usu } = request.only(['codigo_usu'])
+    const usuario = await Usuario.query().where('codigo_usu', codigo_usu).preload('pessoas').firstOrFail()
+    if (usuario.primeiro_acesso_usuario) {
+      usuario.primeiro_acesso_usuario = false
+      usuario.save()
+    }
+  }
+
 
   async loginApp({ request, auth, response }: HttpContextContract) {
     const { login_usu, password } = request.only(['login_usu', 'password'])
@@ -21,11 +30,11 @@ export default class UsuariosController {
       await auth.use('api').attempt(login_usu, password)
 
       const usuario = await Usuario.query().where('login_usu', login_usu).preload('pessoas').firstOrFail()
-      if(usuario.primeiro_acesso_usuario){
-        usuario.primeiro_acesso_usuario = false
-        usuario.save()
-      }
-    
+      // if (usuario.primeiro_acesso_usuario) {
+      //   usuario.primeiro_acesso_usuario = false
+      //   usuario.save()
+      // }
+
       const jogador = await Jogador.query().where('codigo_pessoa_jogador', usuario.pessoas?.codigo_pes).first()
       if (!usuario.$attributes.codigo_usu) {
         return response.status(204).json({ message: "Usuário inexistente" })
@@ -39,11 +48,13 @@ export default class UsuariosController {
         token: authData.token,
         usuario: {
           codigo_usu: usuario.$attributes.codigo_usu,
+          primeiro_acesso: usuario.$attributes.primeiro_acesso_usuario,
           codigo_tim: usuario.time_usu,
           nome_pessoa: usuario.pessoas?.nomraz_pes,
           codigo_pessoa: usuario.pessoas?.codigo_pes,
           codigo_jogador: jogador?.$attributes.codigo_jogador,
-          celular_usuario: usuario?.$attributes.celular_usu
+          celular_usuario: usuario?.$attributes.celular_usu,
+          foto_perfil: jogador?.$attributes.foto_jogador
         }
 
       })
@@ -99,18 +110,18 @@ export default class UsuariosController {
 
         pessoa.save()
       }
-      
-        const pessoaRecuperada = await Pessoa.query()
-          .where('nomraz_pes', nomraz_pes)
-          .andWhere('numcel_pes', celular_usu)
-          .first()
+
+      const pessoaRecuperada = await Pessoa.query()
+        .where('nomraz_pes', nomraz_pes)
+        .andWhere('numcel_pes', celular_usu)
+        .first()
 
       const user = await Usuario.create({
         login_usu: login_usu,
         password: password,
         email_usu: email_usu,
         celular_usu: celular_usu,
-        codpes_usu:  pessoaRecuperada?.codigo_pes,
+        codpes_usu: pessoaRecuperada?.codigo_pes,
       }, { client: trx })
 
       await trx.commit()

@@ -1,6 +1,8 @@
 import { BaseModel, HasOne, column, hasOne } from '@ioc:Adonis/Lucid/Orm'
 import Time from '../Cadastros/Time'
+import TiposDeCampos from '../Campo/TipoCampo'
 import ConfirmarPresenca from '../confirma-presenca/ConfirmarPresenca'
+import DiaSemana from '../dia-semana/DiaSemana'
 import JogadoresSorteio from '../Sorteio/JogadoresSorteio'
 
 export default class Jogo extends BaseModel {
@@ -39,6 +41,31 @@ export default class Jogo extends BaseModel {
     @column()
     declare status_jogo: string
 
+    @column()
+    declare quantidade_jogador_jogo: number
+    @column()
+    declare quantidade_minima_confirmados_jogo: number
+
+    @column()
+    declare tipo_campo_jogo: number
+
+    @column()
+    declare dias_notificacao_jogo: number
+    @column()
+    declare enviar_notificacao_jogo: boolean
+
+
+    @hasOne(() => TiposDeCampos, {
+        foreignKey: 'tipo_campo_jogo',
+        localKey: 'codigo_tcamp'
+    })
+    public tipocampo: HasOne<typeof TiposDeCampos>
+
+    @hasOne(() => DiaSemana, {
+        foreignKey: 'codigo_semana_dia',
+        localKey: 'dia_jogo'
+    })
+    public diasemana: HasOne<typeof DiaSemana>
 
     @hasOne(() => JogadoresSorteio, {
         foreignKey: 'codigo_jogo',

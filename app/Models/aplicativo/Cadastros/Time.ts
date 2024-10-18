@@ -13,15 +13,6 @@ export default class Time extends BaseModel {
   declare pres_tim: number
 
   @column()
-  declare tipo_campo: number
-
-  @column()
-  declare qtdjo_tim: number
-
-  @column()
-  declare dnot_tim: number
-
-  @column()
   declare escudo_tim: string
 
   @hasOne(() => Usuario, {

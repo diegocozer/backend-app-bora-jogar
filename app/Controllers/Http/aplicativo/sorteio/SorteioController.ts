@@ -43,7 +43,7 @@ export default class SorteiosController {
   }
 
   public async getJogadoresSorteio({ auth, params }: HttpContextContract) {
-    const jogadoresSorteados = await JogadoresSorteio.query().where('codigo_jogo', params.codigoTime)
+    const jogadoresSorteados = await JogadoresSorteio.query().where('codigo_jogo', params.codigoTime).preload("jogador", jogador => jogador.preload('posicao'))
     return jogadoresSorteados
 
   }

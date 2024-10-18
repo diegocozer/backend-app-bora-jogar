@@ -9,6 +9,7 @@ export default class JogoController {
     public async insertOrUpdate({ request, response }: HttpContextContract) {
         try {
             const data = request.body()
+
             const body = {
                 local_jogo: data.local_jogo,
                 mensal_jogo: data.mensal_jogo,
@@ -18,7 +19,17 @@ export default class JogoController {
                 codigo_time_jogo: data.codigo_time_jogo,
                 status_jogo: data.mensal_jogo ? 'Mensal' : 'Agendado',
                 endereco_jogo: data.endereco_jogo,
-                urlmaps_jogo: data.urlmaps_jogo
+                urlmaps_jogo: data.urlmaps_jogo,
+                tipo_campo_jogo: data.tipo_campo_jogo,
+                quantidade_jogador_jogo: data.quantidade_jogador_jogo,
+                dias_notificacao_jogo: data.dias_notificacao_jogo,
+                enviar_notificacao_jogo: data.enviar_notificacao_jogo,
+                quantidade_minima_confirmados_jogo: data.quantidade_minima_jogador,
+            }
+            if (data.codigo_jogo) {
+                let jogoatualizar = await Jogo.findBy('codigo_jogo', data.codigo_jogo)
+                jogoatualizar?.merge(body).save()
+                return response.status(200).json({ status: 200, msg: 'Jogo atualizado!' })
             }
             const jogadoresTime = await TimeJogador.query().select().where('codigo_time', body.codigo_time_jogo)
 
@@ -39,7 +50,6 @@ export default class JogoController {
                     codigo_jogador: jogador.codigo_jogador,
                     codigo_jogo: jogo.codigo_jogo
                 })
-                console.log("aqui?")
                 await ConfirmarPresenca.create({
                     codigo_jogador_confirmacao: jogador.codigo_jogador,
                     codigo_jogo_confirmacao: jogo.codigo_jogo,
@@ -66,7 +76,7 @@ export default class JogoController {
     public async getJogosTime({ params }: HttpContextContract) {
         const timeJogo = await Jogo.query()
             .where('codigo_time_jogo', params.codigoTime)
-            .preload('times')
+            .preload('times').preload('diasemana')
         return timeJogo
     }
 

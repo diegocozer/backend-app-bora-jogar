@@ -23,20 +23,23 @@ Route.group(() => {
   Route.post('/cadastrar-usuario', 'aplicativo/usuario/UsuarioAppController.createUsuarioApp')
   Route.get('/getTime/:codigoJog', 'aplicativo/time/TimeController.getTime')
   Route.get('/getTimePresidente/:pres_tim', 'aplicativo/time/TimeController.getTimePresi')
-  
+
   Route.get('/getJogadores/:codtim_jog', 'aplicativo/time/JogadorController.getJogadores')
-  Route.get('/todos-jogadores/:codigo', 'aplicativo/time/JogadorController.jogadores')
+  Route.get('/todos-jogadores/:codigoTime', 'aplicativo/time/JogadorController.jogadores')
+
   Route.post('/salvar-foto-perfil', 'aplicativo/time/JogadorController.insertOrUpdateFotoPerfilJogador')
 
   Route.get('/convites/:codigoPessoa', 'aplicativo/time/JogadorController.getConvites')
   Route.post('/atualizar-convite', 'aplicativo/time/JogadorController.updateConvite')
   Route.post('/convidar-jogadores', 'aplicativo/time/JogadorController.convidarJogadores')
-  
+
   Route.get('/notificacoes/:codigo_pessoa', 'aplicativo/notificacao/NotificacaoController.getNotificacao')
   Route.post('/limpar-notificacao', 'aplicativo/notificacao/NotificacaoController.limparNotificacao')
 
 
-  
+  Route.post('/reset-primeiro-acesso', 'aplicativo/usuario/UsuarioAppController.resetPrimeiroAcesso')
+
+
   Route.post('/logoutApp', 'aplicativo/usuario/UsuarioAppController.logoutApp')
   Route.post('/sorteio-time', 'aplicativo/sorteio/SorteioController.insertOrUpdate')
   Route.get('/getSorteioJogadores/:codigoTime', 'aplicativo/sorteio/SorteioController.getJogadoresSorteio')
@@ -44,7 +47,7 @@ Route.group(() => {
 
   Route.get('/local-jogo/:latitude/:longitude/:type', 'aplicativo/api-maps/ApiMapsController.getLocalJogo')
   Route.get('/procurar-local/:latitude/:longitude/:name', 'aplicativo/api-maps/ApiMapsController.searchLocal')
- 
+
   Route.get('/confirmados/:codigoJogador/:codigoJogo', 'aplicativo/confirmar-presencao/ConfirmarPresencaController.getConfirmado')
   Route.get('/confirmar-presenca/:codigoTime', 'aplicativo/confirmar-presencao/ConfirmarPresencaController.getInformacoesTimeConfirmado')
   Route.post('/confirmar-presenca', 'aplicativo/confirmar-presencao/ConfirmarPresencaController.atualizarConfirmados')

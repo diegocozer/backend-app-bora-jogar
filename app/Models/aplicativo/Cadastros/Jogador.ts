@@ -45,6 +45,9 @@ export default class Jogador extends BaseModel {
   //Média avaliação
   @column()
   declare avaliacao_media_jogador: number
+  //Média avaliação
+  @column()
+  declare foto_jogador: string
 
   @belongsTo(() => Pessoa, { foreignKey: 'codigo_pes', localKey: 'codigo_pessoa_jogador' })
   public Pessoa: BelongsTo<typeof Pessoa>
