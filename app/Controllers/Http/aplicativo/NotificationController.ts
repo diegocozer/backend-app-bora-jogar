@@ -1,12 +1,14 @@
 import { HttpContextContract } from '@ioc:Adonis/Core/HttpContext';
 import Database from '@ioc:Adonis/Lucid/Database';
-import { getDayOfWeek } from 'App/helpers/commonHelper';
+import { formatDateToMySQL, formatHour, getDayOfWeek, getDiaSemana } from 'App/helpers/commonHelper';
 import Jogador from 'App/Models/aplicativo/Cadastros/Jogador';
 import Time from 'App/Models/aplicativo/Cadastros/Time';
 import TimeJogador from 'App/Models/aplicativo/Cadastros/TimeJogador';
 import Equipe from 'App/Models/aplicativo/Equipe/Equipe';
+import EventosJogo from 'App/Models/aplicativo/evento/EventoJogo';
 import JogadorJogo from 'App/Models/aplicativo/jogo/JogadorJogo';
 import Jogo from 'App/Models/aplicativo/jogo/Jogo';
+import Notificacoes from 'App/Models/aplicativo/notificacao/Notificacao';
 import TokenUserNotification from 'App/Models/aplicativo/TokenUser';
 import axios from 'axios';
 import { google } from 'googleapis';
@@ -25,10 +27,10 @@ export default class TokenNotificationUser {
       console.log('savetoken', error)
     }
   }
-   private async getAccessToken() {
+  private async getAccessToken() {
     const MESSAGING_SCOPE = 'https://www.googleapis.com/auth/firebase.messaging';
     const SCOPES = [MESSAGING_SCOPE];
-  
+
     const jwtClient = new google.auth.JWT(
       'firebase-adminsdk-b98z2@borajogarapp-7ea50.iam.gserviceaccount.com',
       '',
@@ -36,7 +38,7 @@ export default class TokenNotificationUser {
       SCOPES,
       ''
     );
-  
+
     return new Promise((resolve, reject) => {
       jwtClient.authorize((err, tokens) => {
         if (err) {
@@ -47,14 +49,14 @@ export default class TokenNotificationUser {
       });
     });
   }
-  
+
 
   public async sendPushNotification({ request, response }: HttpContextContract) {
     try {
       const beareTokenFireBase = await this.getAccessToken()
-    let { title, body, data, pessoaEnvioMensagem, sorteio, codigo_jogo} = request.only(['title', 'body', 'data', 'pessoaEnvioMensagem', 'sorteio', 'subtitle', 'codigo_jogo']);
-    let mensagemSorteio = ''
-    let tituloMensagem = ''
+      let { title, body, pessoaEnvioMensagem, sorteio, codigo_jogo } = request.only(['title', 'body', 'pessoaEnvioMensagem', 'sorteio', 'subtitle', 'codigo_jogo']);
+      let mensagemSorteio = ''
+      let tituloMensagem = ''
       const expoPushTokens = await Database.from('jogadores_sorteio').select()
         .leftJoin(Jogador.table, 'jogador.codigo_jogador', 'jogadores_sorteio.codigo_jogador')
         .leftJoin(Jogo.table, 'jogo.codigo_jogo', ' jogadores_sorteio.codigo_jogo')
@@ -67,40 +69,30 @@ export default class TokenNotificationUser {
       for (const tokenNotificacao of expoPushTokens) {
         let mediaJogador = 4
         if (sorteio) {
-          mensagemSorteio = `Equipe: ${tokenNotificacao.nome_equipe} \n${ mediaJogador >= 3 ? 'Contamos com você para a vitória do time 🥇' : ''}`
+          mensagemSorteio = `Equipe: ${tokenNotificacao.nome_equipe} \n${mediaJogador >= 3 ? 'Contamos com você para a vitória do time 🥇' : ''}`
           tituloMensagem = `Time ${tokenNotificacao?.nome_tim} - Equipes sorteadas 🏆`
         }
         const mensagem = {
           message: {
             token: `${tokenNotificacao.token_ton}`,
             notification: {
-              title:  tituloMensagem ? tituloMensagem : title,
+              title: tituloMensagem ? tituloMensagem : title,
               body: mensagemSorteio ? mensagemSorteio : body,
             }, data: {
               url: "ConfirmarPresenca",
             }
           }
         }
-        // params: JSON.stringify({
-        //   jogo: tokenNotificacao.nome_tim,
-        //   equipe: tokenNotificacao.nome_equipe,
-        //   dia: getDayOfWeek(Number(tokenNotificacao.dia_jogo)),
-        //   hora: tokenNotificacao.hora_inicio_jogo,
-        //   local: tokenNotificacao.local_jogo,
-        //   codigoTime: tokenNotificacao.codigo_tim,
-        //   codigoJogo: tokenNotificacao.codigo_jogo,
-        //   codigoJogador: tokenNotificacao.codigo_jogador
-        // })
         await axios.post(this.pushUrl, mensagem, {
           headers: {
-            'Authorization': `Bearer ${beareTokenFireBase}`, 
+            'Authorization': `Bearer ${beareTokenFireBase}`,
             'Content-Type': 'application/json'
           }
         })
       }
       response.status(200).json({ message: 'Notificações enviadas com sucesso.' });
     } catch (error) {
-      console.log(error)
+      console.log('deu erro')
     }
   }
 
@@ -120,7 +112,7 @@ export default class TokenNotificationUser {
     }
   }
 
-  
+
   public async notificacaoConfirmarPresenca(codigoTime: number) {
     const beareTokenFireBase = await this.getAccessToken()
     try {
@@ -131,38 +123,108 @@ export default class TokenNotificationUser {
         .leftJoin(TimeJogador.table, 'time_jogador.codigo_jogador', 'jogador.codigo_jogador')
         .leftJoin(Time.table, 'time_jogador.codigo_time', 'codigo_tim')
         .leftJoin(JogadorJogo.table, 'codigo_jogo_confirmacao', 'jogador_jogo.codigo_jogo')
-        .leftJoin(Jogo.table, 'jogador_jogo.codigo_jogo','jogo.codigo_jogo')
+        .leftJoin(Jogo.table, 'jogador_jogo.codigo_jogo', 'jogo.codigo_jogo')
         .andWhere('codigo_time_jogador', codigoTime).andWhere('presenca_confirmacao', 0).andWhereNull('data_confirmacao')
       for (const tokenNotificacao of expoPushTokens) {
-        if(tokenNotificacao.codigo_jogo){
-        const mensagem = {
-          message: {
-            token: "dtuztxuoQjSTZPswytjTL-:APA91bFG8N9VXqEgg5jwghQsrpMBO5kpBKMz52-73UzSmwzSog5guwqX9qXv92UM2po03005ypztaVkNeW7EAOPwI19tZVX2XgHulVdj8GaGquk5uwjKzxXscGVzjKidB9wesUjEhNAZ",
-            notification: {
-              title:  `⚠️ Convocação - Time: ${tokenNotificacao.nome_tim} `,
-              body:  `Você ainda não confirmou presença no jogo \nde ${getDayOfWeek(Number(tokenNotificacao.dia_jogo))}`
-            },  data: {
-              url: "ConfirmarPresenca",
-              params: JSON.stringify({
-                jogo: tokenNotificacao.nome_tim,
-                equipe: tokenNotificacao.nome_equipe,
-                dia: getDayOfWeek(Number(tokenNotificacao.dia_jogo)),
-                hora: tokenNotificacao.hora_inicio_jogo,
-                local: tokenNotificacao.local_jogo,
-                codigoTime: tokenNotificacao.codigo_tim,
-                codigoJogo: tokenNotificacao.codigo_jogo,
-                codigoJogador: tokenNotificacao.codigo_jogador
-              })
+        if (tokenNotificacao.codigo_jogo) {
+          const mensagem = {
+            message: {
+              token: "dtuztxuoQjSTZPswytjTL-:APA91bFG8N9VXqEgg5jwghQsrpMBO5kpBKMz52-73UzSmwzSog5guwqX9qXv92UM2po03005ypztaVkNeW7EAOPwI19tZVX2XgHulVdj8GaGquk5uwjKzxXscGVzjKidB9wesUjEhNAZ",
+              notification: {
+                title: `⚠️ Convocação - Time: ${tokenNotificacao.nome_tim} `,
+                body: `Você ainda não confirmou presença no jogo \nde ${getDayOfWeek(Number(tokenNotificacao.dia_jogo))}`
+              }, data: {
+                url: "ConfirmarPresenca",
+                params: JSON.stringify({
+                  jogo: tokenNotificacao.nome_tim,
+                  equipe: tokenNotificacao.nome_equipe,
+                  dia: getDayOfWeek(Number(tokenNotificacao.dia_jogo)),
+                  hora: tokenNotificacao.hora_inicio_jogo,
+                  local: tokenNotificacao.local_jogo,
+                  codigoTime: tokenNotificacao.codigo_tim,
+                  codigoJogo: tokenNotificacao.codigo_jogo,
+                  codigoJogador: tokenNotificacao.codigo_jogador
+                })
+              }
             }
           }
+          await axios.post(this.pushUrl, mensagem, {
+            headers: {
+              'Authorization': `Bearer ${beareTokenFireBase}`,
+              'Content-Type': 'application/json'
+            }
+          })
         }
-        await axios.post(this.pushUrl, mensagem, {
-          headers: {
-            'Authorization': `Bearer ${beareTokenFireBase}`, 
-            'Content-Type': 'application/json'
-          }
+
+      }
+
+    } catch (error) {
+      console.log('enviarnotificacao', error)
+    }
+  }
+  public async notificacaoAvisos({ params, request }: HttpContextContract) {
+    const beareTokenFireBase = await this.getAccessToken()
+    const { titulo, assunto, confirmarPresenca, data, hora, jogoSelecionado, local, rateado } = request.body()
+    try {
+      const expoPushTokens = await TimeJogador.query().select()
+        .leftJoin(Time.table, 'time_jogador.codigo_time', 'codigo_tim')
+        .leftJoin(Jogador.table, 'jogador.codigo_jogador', 'time_jogador.codigo_jogador')
+        .leftJoin(TokenUserNotification.table, 'codigo_pessoa_jogador', 'codigo_pessoa_token')
+        .andWhere('time_jogador.codigo_time', params.codigo_time)
+      if (confirmarPresenca) {
+        await EventosJogo.create({
+          titulo_evento: titulo,
+          assunto_evento: assunto,
+          data_evento: formatDateToMySQL(data),
+          evento_evento: confirmarPresenca,
+          hora_evento: hora,
+          jogo_evento: JSON.stringify(jogoSelecionado),
+          local_evento: local,
+          rateado_evento: rateado,
+          codigo_jogo_evento: jogoSelecionado[0].codigo_jogo,
+          codigo_time_evento: params.codigo_time
         })
       }
+      if (!confirmarPresenca) {
+        await Notificacoes.create({
+          label_notificacao: `${titulo} \n${assunto}`,
+          codigo_jogador_notificacao: null,
+          codigo_time_notificacao: params.codigo_time,
+          jogo_notificacao: jogoSelecionado[0].codigo_jogo
+        })
+      }
+      for (const tokenNotificacao of expoPushTokens) {
+        if (tokenNotificacao.$extras.token_ton) {
+          const mensagem = {
+            message: {
+              token: String(tokenNotificacao.$extras.token_ton),
+              notification: {
+                title: `⚠️ ${String(titulo)} ⚠️`,
+                body: `${String(assunto)} ${data ? `\nDia/Hora: ${data} - ${getDiaSemana(data)} - ${formatHour(hora)}h ` : ''} ${`\nJogo: ${jogoSelecionado[0].diasemana.nome_dia} - ${formatHour(jogoSelecionado[0].hora_inicio_jogo)}`} ${(`\n${jogoSelecionado[0].local_jogo}`)}`
+              }
+              , data: {
+                url: confirmarPresenca ? "ConfirmarPresencaEvento" : null,
+                params: JSON.stringify({
+                  rateado: rateado,
+                  evento: assunto,
+                  jogo: `${jogoSelecionado[0].diasemana.nome_dia} - ${formatHour(jogoSelecionado[0].hora_inicio_jogo)}`,
+                  campo: jogoSelecionado[0].local_jogo,
+                  dia: data,
+                  hora: hora,
+                  local: local,
+                  codigoJogo: jogoSelecionado[0].codigo_jogo,
+                  codigoJogador: tokenNotificacao.codigo_jogador
+                })
+              }
+            }
+          }
+          await axios.post(this.pushUrl, mensagem, {
+            headers: {
+              'Authorization': `Bearer ${beareTokenFireBase}`,
+              'Content-Type': 'application/json'
+            }
+          })
+        }
 
       }
 
@@ -171,6 +233,6 @@ export default class TokenNotificationUser {
     }
   }
 
-  
+
 
 }

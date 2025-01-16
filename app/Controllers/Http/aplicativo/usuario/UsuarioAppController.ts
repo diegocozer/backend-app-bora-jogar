@@ -27,18 +27,14 @@ export default class UsuariosController {
   async loginApp({ request, auth, response }: HttpContextContract) {
     const { login_usu, password } = request.only(['login_usu', 'password'])
     try {
+
+      const usuario = await Usuario.query().where('login_usu', login_usu).andWhere('ativo_usu', true).preload('pessoas').first()
+      if (!usuario) {
+        return response.status(401).json({ status: 204, message: "Usuário inexistente" })
+      }
+      const jogador = await Jogador.query().where('codigo_pessoa_jogador', usuario.pessoas?.codigo_pes).first()
       await auth.use('api').attempt(login_usu, password)
 
-      const usuario = await Usuario.query().where('login_usu', login_usu).preload('pessoas').firstOrFail()
-      // if (usuario.primeiro_acesso_usuario) {
-      //   usuario.primeiro_acesso_usuario = false
-      //   usuario.save()
-      // }
-
-      const jogador = await Jogador.query().where('codigo_pessoa_jogador', usuario.pessoas?.codigo_pes).first()
-      if (!usuario.$attributes.codigo_usu) {
-        return response.status(204).json({ message: "Usuário inexistente" })
-      }
       const authData = await auth.use('api').generate(usuario, {
         expiresIn: '30 days',
       })
@@ -147,6 +143,18 @@ export default class UsuariosController {
     } catch (error) {
 
     }
+  }
+
+  public async desativarUsuario({ request }: HttpContextContract) {
+    try {
+      const { codigoUsu } = request.params()
+      console.log(codigoUsu)
+      const usuario = await Usuario.findByOrFail('codigo_usu', codigoUsu)
+      await usuario.merge({ ativo_usu: false }).save()
+    } catch (error) {
+
+    }
+
   }
 
   public async destroy({ }: HttpContextContract) { }

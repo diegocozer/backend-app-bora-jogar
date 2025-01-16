@@ -1,5 +1,6 @@
-import { BaseModel, HasOne, column, hasOne } from '@ioc:Adonis/Lucid/Orm'
+import { BaseModel, HasMany, HasOne, column, hasMany, hasOne } from '@ioc:Adonis/Lucid/Orm'
 import Usuario from 'App/Models/Usuario'
+import Equipe from '../Equipe/Equipe'
 
 export default class Time extends BaseModel {
   public static table = 'time'
@@ -20,6 +21,12 @@ export default class Time extends BaseModel {
     localKey: 'pres_tim'
   })
   public presidente: HasOne<typeof Usuario>
+
+  @hasMany(() => Equipe, {
+    foreignKey: "codigo_time",
+    localKey: 'codigo_tim'
+  })
+  public equipes: HasMany<typeof Equipe>;
 
 
 

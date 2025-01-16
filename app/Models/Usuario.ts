@@ -11,7 +11,7 @@ import Time from './aplicativo/Cadastros/Time'
 // })
 
 export default class Usuario extends BaseModel {
-  
+
   @column({ isPrimary: true })
   declare codigo_usu: number
 
@@ -37,6 +37,8 @@ export default class Usuario extends BaseModel {
 
   @column()
   declare nompes_usu: string
+  @column()
+  declare ativo_usu: boolean
 
   @belongsTo(() => Time, { foreignKey: 'codigo_tim', localKey: 'time_usu' })
   public time: BelongsTo<typeof Time>
@@ -50,7 +52,7 @@ export default class Usuario extends BaseModel {
   @column.dateTime({ autoCreate: true, autoUpdate: true })
   declare updatedAt: DateTime
 
-  @hasOne(() => Pessoa ,{
+  @hasOne(() => Pessoa, {
     foreignKey: 'codigo_pes',
     localKey: 'codpes_usu'
   })
@@ -62,7 +64,7 @@ export default class Usuario extends BaseModel {
   public tokens: HasMany<typeof ApiToken>
 
   @beforeSave()
-  public static async hashPassword (user: Usuario) {
+  public static async hashPassword(user: Usuario) {
     if (user.$dirty.password) {
       user.password = await Hash.make(user.password)
     }

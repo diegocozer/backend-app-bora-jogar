@@ -15,6 +15,36 @@ export function formatDate(isoDate: string): string {
   return `${day}/${month}/${year}`
 }
 
+export function formatHour(timeString: string) {
+  const [hours, minutes] = timeString.split(':');
+  const formattedHours = hours.padStart(2, '0');
+  const formattedMinutes = minutes.padStart(2, '0');
+  return `${formattedHours}:${formattedMinutes}`;
+}
+
+
+export function getDiaSemana(dateString: string) {
+  if (!dateString) {
+    return ''
+  }
+  const [day, month, year] = dateString.split('/').map(Number)
+  const date = new Date(year, month - 1, day)
+  const daysOfWeek = [
+    'Domingo',
+    'Segunda-feira',
+    'Terça-feira',
+    'Quarta-feira',
+    'Quinta-feira',
+    'Sexta-feira',
+    'Sábado',
+  ]
+
+  const dayOfWeek = date.getDay()
+
+  return daysOfWeek[dayOfWeek]
+}
+
+
 export const padding = (a: number, b: number, c: number, d: number) => ({
   paddingTop: a,
   paddingRight: b ?? a,
@@ -23,7 +53,7 @@ export const padding = (a: number, b: number, c: number, d: number) => ({
 })
 
 export function formatDateToMySQL(date: any) {
-  if (!date) return null
+  if (!date) return ''
   if (date instanceof Date) {
     const year = date.getFullYear()
     const month = String(date.getMonth() + 1).padStart(2, '0')
@@ -38,7 +68,7 @@ export function formatDateToMySQL(date: any) {
   if (!isNaN(parsedDate.getTime())) {
     return formatDateToMySQL(parsedDate)
   }
-  return null
+  return ''
 }
 
 export function getDayOfWeek(codigo) {
@@ -47,7 +77,7 @@ export function getDayOfWeek(codigo) {
   if (codigo >= 0 && codigo <= 6) {
     return diasDaSemana[codigo];
   } else {
-    return 'Código inválido'; 
+    return 'Código inválido';
   }
 }
 
@@ -62,7 +92,7 @@ export const calcularIdade = (dataNasc: string) => {
   }
   return idade;
 };
-  
+
 
 
 export function calcularMedia(valores: number[]): number | string {

@@ -1,6 +1,5 @@
-import { BaseModel, column, HasOne, hasOne } from "@ioc:Adonis/Lucid/Orm";
+import { BaseModel, column } from "@ioc:Adonis/Lucid/Orm";
 import { DateTime } from "luxon";
-import Time from "../Cadastros/Time";
 
 export default class Equipe extends BaseModel {
   @column({ isPrimary: true })
@@ -10,7 +9,7 @@ export default class Equipe extends BaseModel {
   public nome_equipe: string;
 
   @column()
-  public codigo_time: string;
+  public codigo_time: number;
 
   @column.dateTime({ autoCreate: true })
   public createdAt: DateTime;
@@ -18,9 +17,5 @@ export default class Equipe extends BaseModel {
   @column.dateTime({ autoUpdate: true })
   public updatedAt: DateTime;
 
-  @hasOne(() => Time, {
-    foreignKey: "codigo_tim",
-    localKey:'codigo_time'
-  })
-  public time: HasOne<typeof Time>;
+
 }

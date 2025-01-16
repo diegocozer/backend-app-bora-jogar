@@ -11,11 +11,13 @@ export default class Notificacoes extends BaseModel {
     declare label_notificacao: string
     @column()
     declare visualizada_notificacao: boolean
-    
+
     @column()
-    declare codigo_jogador_notificacao: number
+    declare codigo_jogador_notificacao: number | null
     @column()
     declare codigo_time_notificacao: number
+    @column()
+    declare jogo_notificacao: string
 
     @hasOne(() => Time, {
         foreignKey: 'codigo_tim',

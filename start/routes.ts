@@ -16,6 +16,10 @@ Route.get('teste', async ({ response }) => {
 Route.group(() => {
   Route.post('/save-pushtoken', 'aplicativo/NotificationController.saveToken')
 
+  Route.post('/desativar-conta/:codigoUsu', 'aplicativo/usuario/UsuarioAppController.desativarUsuario')
+  Route.post('/salvar-avaliacao-jogador', 'aplicativo/time/JogadorController.salvarAvaliacaoJogador')
+
+
   Route.get('/:token', 'aplicativo/NotificationController.verificaExisteTokenNotification')
   Route.post('/enviar-notificacao', 'aplicativo/NotificationController.sendPushNotification')
   Route.post('/cadastrar-time', 'aplicativo/time/TimeController.insertOrUpdate')
@@ -24,16 +28,26 @@ Route.group(() => {
   Route.get('/getTime/:codigoJog', 'aplicativo/time/TimeController.getTime')
   Route.get('/getTimePresidente/:pres_tim', 'aplicativo/time/TimeController.getTimePresi')
 
-  Route.get('/getJogadores/:codtim_jog', 'aplicativo/time/JogadorController.getJogadores')
+  Route.get('/getJogadores/:codigo_jogo', 'aplicativo/time/JogadorController.getJogadores')
+  Route.get('/getJogadoresSorteio/:codigo_jogo', 'aplicativo/time/JogadorController.getJogadoresConfirmadosSorteio')
+  Route.get('/jogadores-confirmados/:codigo_jogo', 'aplicativo/time/JogadorController.getJogadoresConfirmados')
   Route.get('/todos-jogadores/:codigoTime', 'aplicativo/time/JogadorController.jogadores')
 
   Route.post('/salvar-foto-perfil', 'aplicativo/time/JogadorController.insertOrUpdateFotoPerfilJogador')
+  Route.post('/atualizar-foto-perfil', 'aplicativo/time/JogadorController.salvarFotoJogador')
+  Route.get('/get-foto-perfil/:codigo_jogador', 'aplicativo/time/JogadorController.getFotoJogador')
+
+  Route.get('/historico-jogador/:codigo_jogador', 'aplicativo/historico-jogador/HistoricoJogadorController.getHistoricoPorJogador')
+  Route.get('/historico-jogo/:codigo_historico_jogo', 'aplicativo/historico-jogador/HistoricoJogadorController.getHistoricoJogo')
+  Route.post('/salvar-placar', 'aplicativo/historico-jogador/HistoricoJogadorController.salvarPlacarGols')
 
   Route.get('/convites/:codigoPessoa', 'aplicativo/time/JogadorController.getConvites')
   Route.post('/atualizar-convite', 'aplicativo/time/JogadorController.updateConvite')
   Route.post('/convidar-jogadores', 'aplicativo/time/JogadorController.convidarJogadores')
 
   Route.get('/notificacoes/:codigo_pessoa', 'aplicativo/notificacao/NotificacaoController.getNotificacao')
+  Route.get('/eventos-jogo/:codigo_pessoa', 'aplicativo/notificacao/NotificacaoController.getEventosJogos')
+  Route.post('/enviar-avisos/:codigo_time', 'aplicativo/NotificationController.notificacaoAvisos')
   Route.post('/limpar-notificacao', 'aplicativo/notificacao/NotificacaoController.limparNotificacao')
 
 
@@ -41,7 +55,11 @@ Route.group(() => {
 
 
   Route.post('/logoutApp', 'aplicativo/usuario/UsuarioAppController.logoutApp')
-  Route.post('/sorteio-time', 'aplicativo/sorteio/SorteioController.insertOrUpdate')
+
+  Route.post('/salvar-sorteio', 'aplicativo/sorteio/SorteioController.insertOrUpdate')
+  Route.post('/sortear-equipes', 'aplicativo/sorteio/SorteioController.sortearEquipes')
+
+
   Route.get('/getSorteioJogadores/:codigoTime', 'aplicativo/sorteio/SorteioController.getJogadoresSorteio')
   Route.get('/equipe/:codigoTime', 'aplicativo/equipe/EquipeController.getEquipe')
 

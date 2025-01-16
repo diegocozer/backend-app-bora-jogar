@@ -11,6 +11,8 @@ import Notificacoes from 'App/Models/aplicativo/notificacao/Notificacao';
 import { Storage } from '@google-cloud/storage';
 import Application from '@ioc:Adonis/Core/Application';
 import { HttpContextContract } from '@ioc:Adonis/Core/HttpContext';
+import AvaliacaoJogador from 'App/Models/aplicativo/avaliacao-jogador/AvaliacaoJogador';
+import HistoricoJogador from 'App/Models/aplicativo/historico_jogador/HistoricoJogador';
 import Pessoa from 'App/Models/Pessoa';
 import path from 'path';
 const storage = new Storage({
@@ -20,35 +22,116 @@ const storage = new Storage({
 const bucketName = 'foto-usuario'
 
 export default class JogadorController {
+  public async salvarAvaliacaoJogador({ request, response }: HttpContextContract) {
+    try {
+      let {
+        codigoJogador,
+        defesa,
+        marcacao,
+        passe,
+        respeito,
+        velocidade,
+        codigoHistorico
+
+      } = request.only([
+        "codigoJogador",
+        "defesa",
+        "marcacao",
+        "passe",
+        "respeito",
+        "velocidade",
+        "codigoHistorico"
+      ]);
+
+      const historicoJogador = await HistoricoJogador.query().select().where('codigo_historico_jogo', codigoHistorico)
+        .andWhere('codigo_jogador', codigoJogador).first()
+      let avaliacao
+      if (historicoJogador) {
+        if (historicoJogador.codigo_avaliacao) {
+          avaliacao = await AvaliacaoJogador.findBy('codigo_avaliacao', historicoJogador.codigo_avaliacao)
+          console.log(avaliacao)
+          if (avaliacao) {
+            avaliacao.merge({
+              velocidade_avaliacao: velocidade,
+              defesa_avaliacao: defesa,
+              marcacao_avaliacao: marcacao,
+              respeito_avaliacao: respeito,
+              passe_avaliacao: passe
+            }).save()
+
+          }
+        } else {
+          avaliacao = await AvaliacaoJogador.create({
+            velocidade_avaliacao: velocidade,
+            defesa_avaliacao: defesa,
+            marcacao_avaliacao: marcacao,
+            respeito_avaliacao: respeito,
+            passe_avaliacao: passe
+          })
+          historicoJogador.merge({
+            codigo_avaliacao: avaliacao.codigo_avaliacao
+          }).save()
+        }
+      }
+    } catch (error) {
+
+    }
+  }
 
   public async insertOrUpdateFotoPerfilJogador({ request, response }: HttpContextContract) {
-    const image = request.file('image', {
-      size: '2mb',
-      extnames: ['jpg', 'png', 'jpeg', 'txt'],
-    })
+    try {
 
-    if (!image) {
-      return response.badRequest('Imagem não enviada')
+
+      const image = request.file('image', {
+        size: '2mb',
+        extnames: ['jpg', 'png', 'jpeg', 'txt'],
+      })
+
+      if (!image) {
+        return response.badRequest('Imagem não enviada')
+      }
+
+      const uniqueFileName = `${new Date().getTime()}_${image.clientName}`
+
+      const filePath = path.join(Application.tmpPath('uploads'), uniqueFileName)
+
+      await image.move(Application.tmpPath('uploads'), {
+        name: uniqueFileName,
+      })
+
+      await storage.bucket(bucketName).upload(filePath, {
+        destination: uniqueFileName,
+        public: true,
+      })
+
+      const publicUrl = `https://storage.googleapis.com/${bucketName}/${uniqueFileName}`
+
+      return response.json({ url: publicUrl })
+    } catch (error) {
+      console.log(error)
     }
+  }
+  public async salvarFotoJogador({ request }: HttpContextContract) {
+    try {
+      const { codigo_jogador, url_foto } = request.body()
+      const jogador = await Jogador.findBy('codigo_jogador', codigo_jogador)
+      if (jogador) {
+        jogador.merge({ foto_jogador: url_foto }).save()
+      }
 
-    const uniqueFileName = `${new Date().getTime()}_${image.clientName}`
-
-    const filePath = path.join(Application.tmpPath('uploads'), uniqueFileName)
-
-    await image.move(Application.tmpPath('uploads'), {
-      name: uniqueFileName,
-    })
-
-    await storage.bucket(bucketName).upload(filePath, {
-      destination: uniqueFileName,
-      public: true,
-    })
-
-    const publicUrl = `https://storage.googleapis.com/${bucketName}/${uniqueFileName}`
-    console.log(publicUrl)
-
-    return response.json({ url: publicUrl })
-
+    } catch (error) {
+      console.log(error)
+    }
+  }
+  public async getFotoJogador({ params, response }: HttpContextContract) {
+    const { codigo_jogador } = params
+    const fotoJogador = await Jogador.findBy("codigo_pessoa_jogador", codigo_jogador)
+    if (fotoJogador) {
+      return response.status(200).json({
+        data: { url: fotoJogador?.$attributes.foto_jogador || '' },
+        status: 200
+      });
+    }
   }
   public async insertOrUpdate({ request, response }: HttpContextContract) {
     const trx = await Database.transaction();
@@ -59,8 +142,10 @@ export default class JogadorController {
         codigo_time_jogador,
         data_nascimento_jogador,
         nome_jogador,
-        codigo_posicao_jogador
+        codigo_posicao_jogador,
+        codigo_jogador
       } = request.only([
+        "codigo_jogador",
         "foto_jogador",
         "celular_jogador",
         "codigo_time_jogador",
@@ -118,24 +203,38 @@ export default class JogadorController {
           pessoa.$attributes.codigo_pes = pessoaRecuperada.codigo_pes;
         }
       }
+      if (codigo_jogador) {
 
-      const jogadorAtualizar = await Jogador
-        .query({ client: trx })
-        .where('celular_jogador', celular_jogador)
-        .first();
+        const jogadorAtualizar = await Jogador
+          .query({ client: trx })
+          .where('codigo_jogador', codigo_jogador)
+          .first();
 
-      if (jogadorAtualizar) {
-        jogadorAtualizar.merge({
-          codigo_pessoa_jogador: pessoa.$attributes.codigo_pes,
-          celular_jogador,
-          data_nascimento_jogador: formattedDate,
-          nome_jogador,
-          codigo_posicao_jogador,
-          foto_jogador: foto_jogador ? foto_jogador.url : null
-        });
-        await jogadorAtualizar.save();
-        msg = 'Jogador atualizado com sucesso!';
-        jogador = jogadorAtualizar;
+        if (jogadorAtualizar) {
+          const jogadorCelular = await Jogador
+            .query({ client: trx })
+            .where('celular_jogador', celular_jogador).andWhereNot('codigo_jogador', codigo_jogador)
+            .first();
+          if (jogadorCelular) {
+            msg = 'Já existe um jogador com esse número de celular!';
+            return response.status(201).json({
+              msg,
+              data: jogador,
+              status: 201
+            });
+
+          }
+          jogadorAtualizar.merge({
+            celular_jogador,
+            data_nascimento_jogador: formattedDate,
+            nome_jogador,
+            codigo_posicao_jogador,
+            foto_jogador: foto_jogador ? foto_jogador.url : null
+          });
+          await jogadorAtualizar.save();
+          msg = 'Jogador atualizado com sucesso!';
+          jogador = jogadorAtualizar;
+        }
       } else {
         jogador = await Jogador.create({
           codigo_pessoa_jogador: pessoa.$attributes.codigo_pes,
@@ -178,9 +277,10 @@ export default class JogadorController {
       }
 
       await trx2.commit();  // Commit final
-      return response.status(201).json({
+      return response.status(200).json({
         msg,
-        data: jogador
+        data: jogador,
+        status: 200
       });
     } catch (error) {
       await trx.rollback();
@@ -221,7 +321,6 @@ export default class JogadorController {
             codigo_jogador: jogador.codigo_jogador,
             ativo_time: true
           }, { client: trx });
-
           jogadoresAdicionados.push(jogador);
         }
       }
@@ -366,8 +465,38 @@ export default class JogadorController {
   }
 
   public async getJogadores({ params }: HttpContextContract) {
-    const jogadores = await TimeJogador.query().select().where('codigo_time', params.codtim_jog)
+    const jogadores = await TimeJogador.query().select().where('codigo_time', params.codigo_jogo)
       .preload('jogador', jogador => jogador.preload('posicao'))
     return jogadores
   }
+
+  public async getJogadoresConfirmadosSorteio({ params }: HttpContextContract) {
+
+    const jogadoresConfirmados = await ConfirmarPresenca.query().select()
+      .preload('jogo', (jogo) => jogo.preload('times'))
+      .preload('jogador', (jogador) => jogador.preload('posicao'))
+      .where('presenca_confirmacao', true)
+      .andWhere('codigo_jogo_confirmacao', params.codigo_jogo)
+
+    return jogadoresConfirmados
+  }
+  public async getJogadoresConfirmados({ params, request }: HttpContextContract) {
+    const { query } = request.qs() as Record<string, any>
+    const { naoConfirmados, confirmados } = JSON.parse(query)
+
+    const jogadoresConfirmados = await ConfirmarPresenca.query().select()
+      .preload('jogo', (jogo) => jogo.preload('times'))
+      .preload('jogador', (jogador) => jogador.preload('posicao'))
+      .where((query) => {
+        if (confirmados && !naoConfirmados) {
+          query.where('presenca_confirmacao', true)
+        } else if (naoConfirmados && !confirmados) {
+          query.where('presenca_confirmacao', false)
+        }
+      })
+      .where('codigo_jogo_confirmacao', params.codigo_jogo)
+
+    return jogadoresConfirmados
+  }
+
 }
